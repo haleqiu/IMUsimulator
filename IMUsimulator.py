@@ -61,7 +61,6 @@ def interpolate_rotation_debug(time, data, ips = 100):
                             [0, np.cos(angle[0]),  np.sin(angle[0])*np.cos(angle[1])],
                             [0, -np.sin(angle[0]), np.cos(angle[0])*np.cos(angle[1])]]) for angle in angles])
     gyro = np.einsum("bij, bj -> bi", _transform, angular_rate)
-    # angular_rate @ _transform.T
 
     return time_interpolate, angular_acceleration, angular_rate, gyro, angles
 
@@ -154,11 +153,10 @@ if __name__ == '__main__':
     accel_body = np.matmul(np.expand_dims(accel+gravity,1), angle_Mat).squeeze(1)
     vel_body = np.matmul(np.expand_dims(vel,1),angle_Mat).squeeze(1)
 
-    accel_body_nograv = np.matmul(np.expand_dims(accel,1), angle_Mat).squeeze(1)
-    accel_body_nograv_test = ROTSO3.Inv() @ torch.tensor(accel).float()
+    # accel_body_nograv = np.matmul(np.expand_dims(accel,1), angle_Mat).squeeze(1)
 
     print('*** IMU generation start ***')
-    Int = pm.IMUPreintegrator(gravity = 0.)
+    Int = pm.IMUPreintegrator(gravity = 9.81)
     init = {
         'rot': ROTSO3[0],
         'vel': torch.tensor(vel[0]),
@@ -167,14 +165,13 @@ if __name__ == '__main__':
     length = int((pose_gt.shape[0]-1) * args.imufps / args.gtfps)
     dt = torch.ones(length,1) * (1.0 / args.imufps)
     acc = torch.tensor(accel_body).float()
-    acc = torch.tensor(accel_body_nograv_test).float()
     gyro = torch.tensor(gyro).float()
 
-    
     out_state = Int(init_state = init, dt = dt, acc = acc, gyro = gyro)
     pos_diff = (out_state['pos'] - torch.tensor(pose)).norm(dim=-1).numpy()
     plt.plot(out_state['pos'][0,:,0], out_state['pos'][0,:,1], label = 'imu')
     plt.plot(pose[:,0], pose[:,1], label = 'gt')
+    plt.legend()
     vel_diff = (out_state['vel'][0, :,0] - torch.tensor(vel[:,0])).numpy()
     diff = ((ROTSO3.Inv() * out_state['rot']).Log()* 180/np.pi).numpy()
     plt.show()
