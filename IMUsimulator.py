@@ -132,6 +132,7 @@ if __name__ == '__main__':
     parser.add_argument('--dataroot', type=str, default="/Users/pro/project/data/P001", help='root directory of the dataset')
     parser.add_argument('--imufps', type=int, default=200, help='imu frequency')
     parser.add_argument('--gtfps', type=int, default=10, help='gt frequency')
+    parser.add_argument('--gtrot', default=False, action = 'store_true', help='use gt rotation')
 
     args = parser.parse_args()
 
@@ -167,7 +168,10 @@ if __name__ == '__main__':
     acc = torch.tensor(accel_body).float()
     gyro = torch.tensor(gyro).float()
 
-    out_state = Int(init_state = init, dt = dt, acc = acc, gyro = gyro)
+    if args.gtrot:
+        out_state = Int(init_state = init, dt = dt, acc = acc, gyro = gyro, rot = ROTSO3)
+    else:
+        out_state = Int(init_state = init, dt = dt, acc = acc, gyro = gyro)
     pos_diff = (out_state['pos'] - torch.tensor(pose)).norm(dim=-1).numpy()
     plt.plot(out_state['pos'][0,:,0], out_state['pos'][0,:,1], label = 'imu')
     plt.plot(pose[:,0], pose[:,1], label = 'gt')
